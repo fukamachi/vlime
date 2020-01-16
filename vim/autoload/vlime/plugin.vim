@@ -1070,6 +1070,60 @@ if !exists('g:vlime_default_indent_keywords')
                 \ }
 endif
 
+let g:vlime_loop_keywords = [
+            \ 'with',
+            \ 'initially',
+            \ 'finally',
+            \ 'do',
+            \ 'doing',
+            \ 'return',
+            \ 'collect',
+            \ 'collecting',
+            \ 'append',
+            \ 'appending',
+            \ 'nconc',
+            \ 'nconcing',
+            \ 'count',
+            \ 'counting',
+            \ 'sum',
+            \ 'summing',
+            \ 'maximize',
+            \ 'maximizing',
+            \ 'minimize',
+            \ 'minimizing',
+            \ 'if',
+            \ 'when',
+            \ 'unless',
+            \ 'else',
+            \ 'end',
+            \ 'while',
+            \ 'until',
+            \ 'repeat',
+            \ 'always',
+            \ 'never',
+            \ 'thereis',
+            \ 'for',
+            \ 'as'
+            \ ]
+
+let g:vlime_loop_body_keywords = [
+            \ 'do',
+            \ 'doing',
+            \ 'initially',
+            \ 'finally'
+            \ ]
+
+let g:vlime_lambda_list_keywords = [
+            \ '&allow-other-keys',
+            \ '&aux',
+            \ '&body',
+            \ '&environment',
+            \ '&key',
+            \ '&optional',
+            \ '&rest',
+            \ '&whole'
+            \ ]
+
 ""
 " @usage [shift_width]
 " @public
@@ -1139,6 +1193,42 @@ function! vlime#plugin#CalcCurIndent(...)
     " 4. Default indent keywords
     if type(a_count) == type(v:null)
         let a_count = get(g:vlime_default_indent_keywords, op, v:null)
+    endif
+
+    " 5. LOOP macro
+    if tolower(op_list[0][0]) == 'loop'
+        let current = s:GetLineClause(line('.'), 0, g:vlime_loop_keywords, ':')
+        if col(".") == col("$") || current[0] == v:null
+            let clause = s:GetLineClause(line('.')-1, 0, g:vlime_loop_keywords, ':')
+            if index(g:vlime_loop_body_keywords, s:OmitPrefix(':', clause[0])) >= 0
+                let nextpos = s:GetNextFormPos(clause[1])
+                if type(nextpos) == type(v:null)
+                    return clause[1][2] + 2
+                endif
+                return nextpos[2] - 1
+            endif
+        elseif current[0] != v:null
+            let prevclause = s:PreviousClause(op_list[0][2], g:vlime_loop_keywords, ':')
+            if prevclause[0] != v:null
+                return prevclause[1][2] - 1
+            endif
+        endif
+    endif
+
+    " 6. Inside LAMBDA-LIST
+    if len(op_list) > 1 && tolower(op_list[-1][0]) == 'lambda' && op_list[-1][1] == 1
+        let current = s:GetLineClause(line('.'), 0, g:vlime_lambda_list_keywords)
+        if col(".") == col("$") || current[0] == v:null
+            let clause = s:GetLineClause(line('.')-1, 0, g:vlime_lambda_list_keywords)
+            if clause[0] != v:null
+                return clause[1][2] + len(clause[0])
+            endif
+        elseif current[0] != v:null
+            let prevclause = s:PreviousClause(op_list[0][2], g:vlime_lambda_list_keywords)
+            if prevclause[0] != v:null
+                return prevclause[1][2] - 1
+            endif
+        endif
     endif
 
     if type(a_count) == v:t_number
@@ -1670,4 +1760,90 @@ function! s:isInString()
     endif
     let syntax = map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
     return index(syntax, 'lispString') >= 0
-endfunc
+endfunction
+
+function! s:isEOL()
+    return col('.') == col('$')-(mode() == 'n')
+endfunction
+
+function! s:GetCurrentCursorToken()
+    let pos = getpos('.')
+    let clause = v:null
+    let start = col('.')
+    call search('\s\|$')
+    if s:isEOL()
+        let end = col('$')
+    else
+        let end = col('.') - 1
+    endif
+    if start <= end
+        let keyword = getline('.')[start-1:end-1]
+        let clause = keyword
+    endif
+    call setpos('.', pos)
+    return clause
+endfunction
+
+function! s:OmitPrefix(prefix, str)
+    if a:prefix == v:null
+        return a:str
+    endif
+    if a:str[0:len(a:prefix)-1] == a:prefix
+        return a:str[len(a:prefix):]
+    endif
+    return a:str
+endfunction
+
+function! s:GetLineClause(lineno, startcol, clauses, ...)
+    let pos = getpos('.')
+    let line = getline(a:lineno)
+    let prefix = get(a:000, 0, v:null)
+    call setpos('.', [pos[0], a:lineno, a:startcol, 0])
+
+    let clause = v:null
+    let clausepos = v:null
+
+    while !s:isEOL()
+        call search('\S\|$')
+        let token = s:GetCurrentCursorToken()
+        if token == v:null
+            break
+        endif
+        if index(a:clauses, tolower(s:OmitPrefix(prefix, token))) >= 0
+            let clause = tolower(token)
+            let clausepos = getpos('.')
+            break
+        endif
+        call search('\s\|$')
+    endwhile
+    call setpos('.', pos)
+    return [clause, clausepos]
+endfunction
+
+function! s:PreviousClause(endpos, clauses, ...)
+    let prefix = get(a:000, 0, v:null)
+    for lineno in reverse(range(a:endpos[0], line('.')-1))
+        if lineno == a:endpos[0]
+            let clause = s:GetLineClause(lineno, a:endpos[1], a:clauses, prefix)
+        else
+            let clause = s:GetLineClause(lineno, 0, a:clauses, prefix)
+        endif
+        if clause[0] != v:null
+            return clause
+        endif
+    endfor
+    return [v:null, v:null]
+endfunction
+
+function! s:GetNextFormPos(at)
+    let pos = getpos('.')
+    call setpos('.', a:at)
+    let nextpos = v:null
+    call search('\s\|$')
+    if !s:isEOL()
+        call search('\S\|$')
+        let nextpos = getpos('.')
+    endif
+    call setpos('.', pos)
+    return nextpos
+endfunction
