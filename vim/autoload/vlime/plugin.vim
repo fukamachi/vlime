@@ -1200,7 +1200,9 @@ function! vlime#plugin#CalcCurIndent(...)
         let current = s:GetLineClause(line('.'), 0, g:vlime_loop_keywords, ':')
         if col(".") == col("$") || current[0] == v:null
             let clause = s:GetLineClause(line('.')-1, 0, g:vlime_loop_keywords, ':')
-            if index(g:vlime_loop_body_keywords, s:OmitPrefix(':', clause[0])) >= 0
+            if clause[0] == v:null
+                return lispindent(line_no)
+            elseif index(g:vlime_loop_body_keywords, s:OmitPrefix(':', clause[0])) >= 0
                 let nextpos = s:GetNextFormPos(clause[1])
                 if type(nextpos) == type(v:null)
                     return clause[1][2] + 2
