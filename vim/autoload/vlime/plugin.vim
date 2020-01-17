@@ -1256,6 +1256,10 @@ function! vlime#plugin#CalcCurIndent(...)
                 \ op =~ '^do-'
         return 2
     else
+        " No indentation for the first argument
+        if op_list[0][1] == 1
+            return vs_col
+        endif
         return lispindent(line_no)
     endif
 endfunction
