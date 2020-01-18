@@ -1825,7 +1825,6 @@ function! s:GetLineClause(lineno, startcol, clauses, ...)
         if index(a:clauses, tolower(s:OmitPrefix(prefix, token))) >= 0
             let clause = tolower(token)
             let clausepos = getpos('.')
-            break
         endif
         call search('\s\|$')
     endwhile
