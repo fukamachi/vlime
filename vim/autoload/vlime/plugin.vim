@@ -1814,6 +1814,10 @@ function! s:GetLineClause(lineno, startcol, clauses, ...)
 
     while !s:isEOL()
         call search('\S\|$')
+        let syntax = map(synstack(a:lineno, col('.')), 'synIDattr(v:val, "name")')
+        if index(syntax, 'lispComment') >= 0
+            break
+        endif
         let token = s:GetCurrentCursorToken()
         if token == v:null
             break
