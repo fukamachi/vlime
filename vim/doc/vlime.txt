@@ -258,7 +258,7 @@ in insert mode, or use |=| command.
 
 Vlime has a set of indent rules that are similar to the ones SLIME
 used. Multi-line expressions are generally indented by the width of
-one space characters, regardless of the value of |shiftwidth|. Macros
+two space characters, regardless of the value of |shiftwidth|. Macros
 and special operators with "&BODY" arguments are treated specially, in
 that all the arguments before "&BODY" will be indented one more level.
 For example, MULTIPLE-VALUE-BIND has two arguments before "&BODY", so

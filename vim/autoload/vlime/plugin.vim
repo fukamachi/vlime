@@ -1258,11 +1258,8 @@ function! vlime#plugin#CalcCurIndent(...)
                 \ op =~ '^do-'
         return 2
     else
-        " No indentation for the first argument
-        if op_list[0][1] == 1
-            return vs_col
         " Indent as a property list if the list starts with a keyword
-        elseif op_list[0][0] =~ '^:'
+        if op_list[0][0] =~ '^:'
             return vs_col
         endif
         return lispindent(line_no)
@@ -1834,9 +1831,10 @@ endfunction
 
 function! s:PreviousClause(endpos, clauses, ...)
     let pos = getpos('.')
-    call vlime#util#sexp#PreviousLoopClause()
-    let token = vlime#util#sexp#CursorToken()
-    let tokenpos = getpos('.')
+    let token = vlime#util#sexp#PreviousLoopClause(a:endpos)
+    if token != v:null
+        let tokenpos = getpos('.')
+    endif
     call setpos('.', pos)
     return [token, tokenpos]
 endfunction

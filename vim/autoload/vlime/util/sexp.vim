@@ -166,6 +166,7 @@ function! vlime#util#sexp#PreviousLoopClause(...)
             break
         endif
         let token = vlime#util#sexp#CursorToken()
+        let token = tolower(substitute(token, '^:', '', ''))
         if index(g:vlime_loop_keywords, token) >= 0
             break
         endif
