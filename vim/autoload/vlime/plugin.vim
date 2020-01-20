@@ -1209,7 +1209,7 @@ function! vlime#plugin#CalcCurIndent(...)
                 endif
                 return nextpos[2] - 1
             endif
-        elseif current[0] != v:null
+        else
             let prevclause = s:PreviousClause(op_list[0][2], g:vlime_loop_keywords, ':')
             if prevclause[0] != v:null
                 return prevclause[1][2] - 1
@@ -1833,18 +1833,12 @@ function! s:GetLineClause(lineno, startcol, clauses, ...)
 endfunction
 
 function! s:PreviousClause(endpos, clauses, ...)
-    let prefix = get(a:000, 0, v:null)
-    for lineno in reverse(range(a:endpos[0], line('.')-1))
-        if lineno == a:endpos[0]
-            let clause = s:GetLineClause(lineno, a:endpos[1], a:clauses, prefix)
-        else
-            let clause = s:GetLineClause(lineno, 0, a:clauses, prefix)
-        endif
-        if clause[0] != v:null
-            return clause
-        endif
-    endfor
-    return [v:null, v:null]
+    let pos = getpos('.')
+    call vlime#util#sexp#PreviousLoopClause()
+    let token = vlime#util#sexp#CursorToken()
+    let tokenpos = getpos('.')
+    call setpos('.', pos)
+    return [token, tokenpos]
 endfunction
 
 function! s:GetNextFormPos(at)
