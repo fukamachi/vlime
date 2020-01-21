@@ -109,8 +109,13 @@ function! vlime#util#sexp#ForwardSexp()
     endwhile
 endfunction
 
-function! vlime#util#sexp#BackwardSexp()
-    call vlime#util#sexp#SkipComments('bW')
+function! vlime#util#sexp#BackwardSexp(...)
+    let flags = get(a:000, 0, '')
+    let pos = getpos('.')
+    call vlime#util#sexp#SkipComments('bW' . flags)
+    if pos[1] == line('.') || pos[2] == col('.')
+        call s:MovePrevChar()
+    endif
     let char = s:CursorChar()
     if char == ')'
         call searchpair('(', '', ')', 'bW')
@@ -154,7 +159,7 @@ function! vlime#util#sexp#PreviousLoopClause(...)
     let endpos = get(a:000, 0, getpos('^'))
     while v:true
         while v:true
-            call vlime#util#sexp#BackwardSexp()
+            call vlime#util#sexp#BackwardSexp('c')
             let char = s:CursorChar()
             if char != '('
                 break
