@@ -34,6 +34,17 @@ let g:vlime_loop_keywords = [
             \ 'as'
             \ ]
 
+let g:vlime_lambda_list_keywords = [
+            \ '&allow-other-keys',
+            \ '&aux',
+            \ '&body',
+            \ '&environment',
+            \ '&key',
+            \ '&optional',
+            \ '&rest',
+            \ '&whole'
+            \ ]
+
 function! s:isEOL()
     return col('.') == col('$')-(mode() == 'n')
 endfunction
@@ -155,8 +166,9 @@ function! vlime#util#sexp#CursorToken()
     return token
 endfunction
 
-function! vlime#util#sexp#PreviousLoopClause(...)
+function! vlime#util#sexp#PreviousClause(keywords, ...)
     let endpos = get(a:000, 0, getpos('^'))
+    let prefix = get(a:000, 1, '')
     while v:true
         while v:true
             call vlime#util#sexp#BackwardSexp('c')
@@ -166,15 +178,37 @@ function! vlime#util#sexp#PreviousLoopClause(...)
             endif
         endwhile
         let pos = getpos('.')
-        if pos[1] < endpos[1] || (pos[1] == endpos[1] && pos[2] < endpos[2])
+        if pos[1] < endpos[0] || (pos[1] == endpos[0] && pos[2] < endpos[1])
             let token = v:null
             break
         endif
         let token = vlime#util#sexp#CursorToken()
-        let token = tolower(substitute(token, '^:', '', ''))
-        if index(g:vlime_loop_keywords, token) >= 0
+        let token = tolower(substitute(token, ('^' . prefix), '', ''))
+        if index(a:keywords, token) >= 0
             break
         endif
     endwhile
     return token
+endfunction
+
+function! vlime#util#sexp#PreviousLoopClause(...)
+    let endpos = get(a:000, 0, getpos('^'))
+    let pos = getpos('.')
+    let token = vlime#util#sexp#PreviousClause(g:vlime_loop_keywords, endpos, ':')
+    let tokenpos = token == v:null ? v:null : getpos('.')
+    call setpos('.', pos)
+    return [token, tokenpos]
+endfunction
+
+function! vlime#util#sexp#PreviousLambdaListKeyword(...)
+    let endpos = get(a:000, 0, v:null)
+    if type(endpos) == type(v:null)
+        let top = getpos('^')
+        let endpos = [top[1], top[2]]
+    endif
+    let pos = getpos('.')
+    let token = vlime#util#sexp#PreviousClause(g:vlime_lambda_list_keywords, endpos)
+    let tokenpos = token == v:null ? v:null : getpos('.')
+    call setpos('.', pos)
+    return [token, tokenpos]
 endfunction

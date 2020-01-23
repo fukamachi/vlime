@@ -1210,7 +1210,7 @@ function! vlime#plugin#CalcCurIndent(...)
                 return nextpos[2] - 1
             endif
         else
-            let prevclause = s:PreviousClause(op_list[0][2], g:vlime_loop_keywords, ':')
+            let prevclause = vlime#util#sexp#PreviousLoopClause(op_list[0][2])
             if prevclause[0] != v:null
                 return prevclause[1][2] - 1
             endif
@@ -1218,17 +1218,21 @@ function! vlime#plugin#CalcCurIndent(...)
     endif
 
     " 6. Inside LAMBDA-LIST
-    if len(op_list) > 1 && tolower(op_list[-1][0]) == 'lambda' && op_list[-1][1] == 1
-        let current = s:GetLineClause(line('.'), 0, g:vlime_lambda_list_keywords)
-        if col(".") == col("$") || current[0] == v:null
-            let clause = s:GetLineClause(line('.')-1, 0, g:vlime_lambda_list_keywords)
-            if clause[0] != v:null
-                return clause[1][2] + len(clause[0])
-            endif
-        elseif current[0] != v:null
-            let prevclause = s:PreviousClause(op_list[0][2], g:vlime_lambda_list_keywords)
-            if prevclause[0] != v:null
-                return prevclause[1][2] - 1
+    if len(op_list) > 1
+        let keyword = tolower(op_list[-1][0])
+        if (keyword == 'lambda' && op_list[-1][1] == 1) ||
+                    \ (keyword == 'defun' && op_list[-1][1] == 2)
+            let current = s:GetLineClause(line('.'), 0, g:vlime_lambda_list_keywords)
+            if col(".") == col("$") || current[0] == v:null
+                let clause = s:GetLineClause(line('.')-1, 0, g:vlime_lambda_list_keywords)
+                if clause[0] != v:null
+                    return clause[1][2] + len(clause[0])
+                endif
+            elseif current[0] != v:null
+                let prevclause = vlime#util#sexp#PreviousLambdaListKeyword(op_list[0][2])
+                if prevclause[0] != v:null
+                    return prevclause[1][2] - 1
+                endif
             endif
         endif
     endif
@@ -1827,16 +1831,6 @@ function! s:GetLineClause(lineno, startcol, clauses, ...)
     endwhile
     call setpos('.', pos)
     return [clause, clausepos]
-endfunction
-
-function! s:PreviousClause(endpos, clauses, ...)
-    let pos = getpos('.')
-    let token = vlime#util#sexp#PreviousLoopClause(a:endpos)
-    if token != v:null
-        let tokenpos = getpos('.')
-    endif
-    call setpos('.', pos)
-    return [token, tokenpos]
 endfunction
 
 function! s:GetNextFormPos(at)
